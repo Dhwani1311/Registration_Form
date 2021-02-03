@@ -2,7 +2,8 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:email_validator/email_validator.dart';
-//import 'detail_page.dart';
+import 'detail_page.dart';
+import 'package:intl/intl.dart';
 
 void main() {
   var email = "abc@gmail.com";
@@ -31,25 +32,30 @@ enum Gender { Male, Female }
 class MyForm extends StatefulWidget {
   MyForm({Key key, this.title}) : super(key: key);
   final String title;
-
   @override
   _MyFormState createState() => _MyFormState();
 }
 
 class _MyFormState extends State<MyForm> {
+  final name = TextEditingController();
+  final mail = TextEditingController();
+  final num = TextEditingController();
   final _formKey = GlobalKey<FormState>();
   int id = 1;
-  File _image;
+  PickedFile _image;
+
   final ImagePicker imagePicker = ImagePicker();
   String radioButtonItem = 'Male';
   bool autoValidate = false;
   bool itVal = false;
   bool ceVal = false;
   bool bcaVal = false;
+  var temp = [];
   double currentVal = 20;
-  DateTime currentDate = DateTime.now();
-
+  DateTime now = DateTime.now();
   final RegExp phn = new RegExp(r"^(?:[+0]9)?[0-9]{10,12}$");
+  String formateDate = '';
+
   @override
   Widget build(BuildContext context) {
     return SingleChildScrollView(
@@ -73,8 +79,8 @@ class _MyFormState extends State<MyForm> {
                   child: _image != null
                       ? ClipRRect(
                     borderRadius: BorderRadius.circular(50),
-                    child: Image.file(
-                      _image, width: 100, height: 100, fit: BoxFit.fitHeight,),)
+                    child: Image.file(File(_image.path),
+                       width: 100, height: 100, fit: BoxFit.fitHeight,),)
                       : Container(
                     decoration: BoxDecoration(
                         color: Colors.grey[200],
@@ -93,6 +99,7 @@ class _MyFormState extends State<MyForm> {
             Padding(
               padding: EdgeInsets.only(left: 10, right: 10),
               child: TextFormField(
+                controller: name,
                 decoration: InputDecoration(
                   labelText: "Name",
                   hintText: "Enter Name",
@@ -107,6 +114,7 @@ class _MyFormState extends State<MyForm> {
             Padding(
               padding: EdgeInsets.only(left: 10, right: 10),
               child: TextFormField(
+                controller: mail,
                 decoration: InputDecoration(
                     labelText: "Email",
                     hintText: 'Enter Email Id'
@@ -116,6 +124,7 @@ class _MyFormState extends State<MyForm> {
             Padding(
               padding: EdgeInsets.only(left: 10, right: 10),
               child: TextFormField(
+                controller: num,
                 decoration: InputDecoration(
                     labelText: "Mobile Number",
                     hintText: "Enter Mobile Number",
@@ -128,7 +137,6 @@ class _MyFormState extends State<MyForm> {
                   else
                     return null;
                 },
-
               ),),
             Row(
               children: [
@@ -139,7 +147,8 @@ class _MyFormState extends State<MyForm> {
                       Text("Date Of Birth",style: TextStyle(fontSize: 15),),
                           Padding(
                             padding: const EdgeInsets.all(10),
-                            child: Text("${currentDate.toLocal()}".split(' ')[0],
+                            child:
+                            Text(formateDate == ''? 'Date Not Selected' : formateDate,
                            style: TextStyle(fontSize: 15,),
                             ),
                           ),
@@ -211,6 +220,10 @@ class _MyFormState extends State<MyForm> {
                         onChanged: (bool value) {
                           setState(() {
                             ceVal = value;
+                            // if(value == true)
+                            // {
+                            //   temp.add("CE");
+                            // }
                           });
                         },
                       ),
@@ -220,12 +233,13 @@ class _MyFormState extends State<MyForm> {
                       Text("BCA"),
                       Checkbox(
                         value: bcaVal,
+                       // onChanged: getCheckboxItems()),
                         onChanged: (bool value) {
                           setState(() {
                             bcaVal = value;
                           });
                         },
-                      ),
+                     ),
                     ],
                   ),
                 ],
@@ -237,7 +251,7 @@ class _MyFormState extends State<MyForm> {
                   Text("Age",style: TextStyle(fontSize: 15),),
                   Column(
                     children: <Widget>[
-                      Text(currentVal.toString(),),
+                      Text(currentVal.round().toString(),),
                       Slider(
                         value: currentVal,
                         min: 0,
@@ -256,56 +270,77 @@ class _MyFormState extends State<MyForm> {
                 //padding: EdgeInsets.all(30),
                 child: RaisedButton(
                   child: Text("Submit"),
-                  onPressed:
-                  _validateInputs,
-                   // navigateToSubPage(context);
+                  onPressed: () {
+                    _validateInputs(context);
+                  },
                 )
             ),
+
           ],),
       ),
     );
   }
-  // Future navigateToSubPage(context) async {
-  //   Navigator.push(context, MaterialPageRoute(builder: (context) => SubPage()));
-  // }
-  void _validateInputs() {
+  void _validateInputs(BuildContext context) {
     if (_formKey.currentState.validate()) {
       _formKey.currentState.save();
+      Navigator.of(context).push(MaterialPageRoute(builder: (context) => SubPage(
+          userName:name.text,
+          userMail:mail.text,
+          userNum:num.text,
+         userDate: formateDate,
+          userGender:radioButtonItem.toString(),
+          userDept:temp.toString(),
+          userAge:currentVal.round().toString())));
+          if(ceVal == true)
+          {
+            temp.add("CE");
+          }
+          else if(itVal == true)
+          {
+            temp.add("IT");
+
+          }
+         else
+          {
+            temp.add("BCE");
+
+          }
     } else {
       setState(() {
         autoValidate = true;
       });
     }
   }
+
   Future<void> _pickedDate(BuildContext context) async {
     final DateTime date = await showDatePicker(
         context: context,
-        initialDate: currentDate,
+        initialDate: DateTime.now(),
         firstDate: DateTime(1990),
         lastDate: DateTime(2050));
-    if (date != null && date != currentDate)
+    final DateFormat formatOfDate = DateFormat('dd-MMM-yyyy');
+    String formatedDate = formatOfDate.format(date);
+    formateDate = formatedDate;
       setState(() {
-        currentDate = date;
       });
 
   }
-
    _imgFromCamera() async {
-    var image = (await imagePicker.getImage(
+    var image = await imagePicker.getImage(
         source: ImageSource.camera,
         imageQuality: 50
-    ));
+    );
     setState(() {
-      _image = image as File;
+      _image = image;
     });
   }
   _imgFromGallery() async {
-    File image = (await imagePicker.getImage(
+    PickedFile image = await imagePicker.getImage(
         source: ImageSource.gallery,
         imageQuality: 50
-    )) as File;
+    );
     setState(() {
-      _image = image;
+      _image = image ;
     });
   }
   void _showPicker(context) {
